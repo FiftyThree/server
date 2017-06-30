@@ -40,7 +40,8 @@ const stats = {
 
 // handle proxying a request to a client
 // will wait for a tunnel socket to become available
-function maybe_bounce(req, res, sock, head) {
+function maybe_bounce(req, res, sock, head, opt) {
+    opt = opt || {};
     // without a hostname, we won't know who the request is for
     const hostname = req.headers.host;
     if (!hostname) {
@@ -48,6 +49,15 @@ function maybe_bounce(req, res, sock, head) {
     }
 
     const subdomain = tldjs.getSubdomain(hostname);
+    
+    if (opt.subdomain_pattern) {
+        var re = new RegExp(opt.subdomain_pattern, "i");
+        var matches = hostname.match(re);
+        if (matches) {
+            subdomain = matches[1];
+        }
+    }
+    
     if (!subdomain) {
         return false;
     }
@@ -311,7 +321,8 @@ module.exports = function(opt) {
             console.error('response', err);
         });
 
-        debug('request %s', req.url);
+        debug('request host=%s, url=%s', req.headers.host, req.url);
+
         if (maybe_bounce(req, res, null, null)) {
             return;
         };
