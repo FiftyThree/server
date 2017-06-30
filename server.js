@@ -49,7 +49,7 @@ function maybe_bounce(req, res, sock, head, opt) {
         return false;
     }
 
-    const subdomain = tldjs.getSubdomain(hostname);
+    let subdomain = tldjs.getSubdomain(hostname);
 
     if (opt.subdomain_pattern) {
         var re = new RegExp(opt.subdomain_pattern, "i");
@@ -327,7 +327,7 @@ module.exports = function(opt) {
 
         debug('request host=%s, url=%s', req.headers.host, req.url);
 
-        if (maybe_bounce(req, res, null, null)) {
+        if (maybe_bounce(req, res, null, null, opt)) {
             return;
         };
 
@@ -343,7 +343,7 @@ module.exports = function(opt) {
             console.error('ws socket', err);
         });
 
-        if (maybe_bounce(req, null, socket, head)) {
+        if (maybe_bounce(req, null, socket, head, opt)) {
             return;
         };
 
