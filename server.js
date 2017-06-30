@@ -40,7 +40,8 @@ const stats = {
 
 // handle proxying a request to a client
 // will wait for a tunnel socket to become available
-function maybe_bounce(req, res, sock, head) {
+function maybe_bounce(req, res, sock, head, opt) {
+    opt = opt || {};
     // without a hostname, we won't know who the request is for
     const hostname = req.headers.host;
     if (!hostname) {
@@ -48,22 +49,20 @@ function maybe_bounce(req, res, sock, head) {
     }
 
     const subdomain = tldjs.getSubdomain(hostname);
+    
+    if (opt.subdomain_pattern) {
+        var re = new RegExp(opt.subdomain_pattern, "i");
+        var matches = hostname.match(re);
+        if (matches) {
+            subdomain = matches[1];
+        }
+    }
+    
     if (!subdomain) {
         return false;
     }
 
     const client = clients[subdomain];
-    
-    if(!client || subdomain.indexOf('.') !== -1) {
-        subdomain = subdomain.split('.');
-        for(var i = 0; i <= subdomain.length; i++) {
-            client_id = subdomain.slice(0, i).join('.');
-            client = clients[client_id];
-            if(client) {
-                break;
-            }
-        }
-    }
 
     // no such subdomain
     // we use 502 error to the client to signify we can't service the request
@@ -323,15 +322,8 @@ module.exports = function(opt) {
         });
 
         debug('request host=%s, url=%s', req.headers.host, req.url);
-        var configuredHosts = opt.host.split(',');
-        var matchedHost = false;
-        for (int i=0; i<configuredHosts.length; i++) {
-            if (configuredHosts[i] === req.headers.host) {
-                matchedHost = true;
-                break;
-            }
-        }
-        if (!matchedHost && maybe_bounce(req, res, null, null)) {
+
+        if (maybe_bounce(req, res, null, null)) {
             return;
         };
 
