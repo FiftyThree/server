@@ -6,7 +6,7 @@ import Debug from 'debug';
 import http_proxy from 'http-proxy';
 import http from 'http';
 import Promise from 'bluebird';
-import * as net from 'net';
+import isIP from 'net';
 
 import Proxy from './proxy';
 import rand_id from './lib/rand_id';
@@ -45,7 +45,7 @@ function maybe_bounce(req, res, sock, head, opt) {
     opt = opt || {};
     // without a hostname, we won't know who the request is for
     const hostname = req.headers.host;
-    if (!hostname || net.isIP(hostname.split(':')[0]) {
+    if (!hostname || isIP(hostname.split(':')[0])) {
         return false;
     }
 
