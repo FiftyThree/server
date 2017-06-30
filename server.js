@@ -55,7 +55,10 @@ function maybe_bounce(req, res, sock, head, opt) {
         var re = new RegExp(opt.subdomain_pattern, "i");
         var matches = hostname.match(re);
         if (matches) {
-            subdomain = matches[1];
+            subdomain = null;
+            if (matches.length > 1) {
+                subdomain = matches[1];
+            }
         }
     }
 
