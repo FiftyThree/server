@@ -6,7 +6,7 @@ import Debug from 'debug';
 import http_proxy from 'http-proxy';
 import http from 'http';
 import Promise from 'bluebird';
-import isIP from 'net';
+import * as net from 'net';
 
 import Proxy from './proxy';
 import rand_id from './lib/rand_id';
@@ -45,12 +45,12 @@ function maybe_bounce(req, res, sock, head, opt) {
     opt = opt || {};
     // without a hostname, we won't know who the request is for
     const hostname = req.headers.host;
-    if (!hostname || isIP(hostname.split(':')[0])) {
+    if (!hostname || net.isIP(hostname.split(':')[0])) {
         return false;
     }
 
     const subdomain = tldjs.getSubdomain(hostname);
-    
+
     if (opt.subdomain_pattern) {
         var re = new RegExp(opt.subdomain_pattern, "i");
         var matches = hostname.match(re);
@@ -58,7 +58,7 @@ function maybe_bounce(req, res, sock, head, opt) {
             subdomain = matches[1];
         }
     }
-    
+
     if (!subdomain) {
         return false;
     }
