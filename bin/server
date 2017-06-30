@@ -17,8 +17,8 @@ const argv = optimist
         default: '80',
         describe: 'listen on this port for outside requests'
     })
-    .options('host', {
-        describe: 'listen on this host for outside requests'
+    .options('subdomain-pattern', {
+        describe: 'regex pattern to extract subdomain from host'
     })
     .options('max-sockets', {
         default: 10,
@@ -35,7 +35,7 @@ const server = require('../server')({
     max_tcp_sockets: argv['max-sockets'],
     secure: argv.secure,
     port: argv.port,
-    host: argv.host
+    subdomain_pattern: argv['subdomain-pattern']
 });
 
 server.listen(argv.port, () => {
