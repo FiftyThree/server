@@ -53,6 +53,17 @@ function maybe_bounce(req, res, sock, head) {
     }
 
     const client = clients[subdomain];
+    
+    if(!client || subdomain.indexOf('.') !== -1) {
+        subdomain = subdomain.split('.');
+        for(var i = 0; i <= subdomain.length; i++) {
+            client_id = subdomain.slice(0, i).join('.');
+            client = clients[client_id];
+            if(client) {
+                break;
+            }
+        }
+    }
 
     // no such subdomain
     // we use 502 error to the client to signify we can't service the request
@@ -311,8 +322,16 @@ module.exports = function(opt) {
             console.error('response', err);
         });
 
-        debug('request %s', req.url);
-        if (maybe_bounce(req, res, null, null)) {
+        debug('request host=%s, url=%s', req.headers.host, req.url);
+        var configuredHosts = opt.host.split(',');
+        var matchedHost = false;
+        for (int i=0; i<configuredHosts.length; i++) {
+            if (configuredHosts[i] === req.headers.host) {
+                matchedHost = true;
+                break;
+            }
+        }
+        if (!matchedHost && maybe_bounce(req, res, null, null)) {
             return;
         };
 
