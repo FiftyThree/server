@@ -2,10 +2,11 @@ import net from 'net';
 import EventEmitter from 'events';
 import log from 'bookrc';
 import Debug from 'debug';
+import * as portastic from 'portastic';
 
 const debug = Debug('localtunnel:server');
 
-const Proxy = function(opt) {
+const Proxy = async function(opt) {
     if (!(this instanceof Proxy)) {
         return new Proxy(opt);
     }
@@ -19,8 +20,14 @@ const Proxy = function(opt) {
     // default max is 10
     self.max_tcp_sockets = opt.max_tcp_sockets || 10;
 
+    var ports = await portastic.find({min: 6000, max: 6500, retreive: 1});
+
+    if (!ports || ports.length < 1) {
+        throw new Error('could not start tunnel: no open ports were found in the allowed range');
+    }
+
     // new tcp server to service requests for this client
-    self.server = net.createServer();
+    self.server = net.createServer(ports[0]);
 
     // track initial user connection setup
     self.conn_timeout = undefined;

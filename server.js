@@ -198,7 +198,7 @@ function maybe_bounce(req, res, sock, head, opt) {
 }
 
 // create a new tunnel with `id`
-function new_client(id, opt, cb) {
+async function new_client(id, opt, cb) {
 
     // can't ask for id already is use
     // TODO check this new id again
@@ -211,7 +211,7 @@ function new_client(id, opt, cb) {
         max_tcp_sockets: opt.max_tcp_sockets
     };
 
-    const client = Proxy(popt);
+    const client = await Proxy(popt);
 
     // add to clients map immediately
     // avoiding races with other clients requesting same id
@@ -243,23 +243,28 @@ module.exports = function(opt) {
 
     const app = express();
 
-    app.get('/', function(req, res, next) {
+    app.get('/', async function(req, res, next) {
         if (req.query['new'] === undefined) {
             return next();
         }
 
         const req_id = rand_id();
         debug('making new client with id %s', req_id);
-        new_client(req_id, opt, function(err, info) {
-            if (err) {
-                res.statusCode = 500;
-                return res.end(err.message);
-            }
+        try {
+            await new_client(req_id, opt, function(err, info) {
+                if (err) {
+                    res.statusCode = 500;
+                    return res.end(err.message);
+                }
 
-            const url = schema + '://' + req_id + '.' + req.headers.host;
-            info.url = url;
-            res.json(info);
-        });
+                const url = schema + '://' + req_id + '.' + req.headers.host;
+                info.url = url;
+                res.json(info);
+            });
+        } catch (error) {
+            res.status(502)
+            res.end(error.message);
+        }
     });
 
     app.get('/', function(req, res, next) {
@@ -283,7 +288,7 @@ module.exports = function(opt) {
         });
     });
 
-    app.get('/:req_id', function(req, res, next) {
+    app.get('/:req_id', async function(req, res, next) {
         const req_id = req.params.req_id;
 
         // limit requested hostnames to 63 characters
@@ -294,15 +299,20 @@ module.exports = function(opt) {
         }
 
         debug('making new client with id %s', req_id);
-        new_client(req_id, opt, function(err, info) {
-            if (err) {
-                return next(err);
-            }
+        try {
+            await new_client(req_id, opt, function(err, info) {
+                if (err) {
+                    return next(err);
+                }
 
-            const url = schema + '://' + req_id + '.' + req.headers.host;
-            info.url = url;
-            res.json(info);
-        });
+                const url = schema + '://' + req_id + '.' + req.headers.host;
+                info.url = url;
+                res.json(info);
+            });
+        } catch (error) {
+            res.status(502)
+            res.end(error.message);
+        }
 
     });
 
