@@ -7,6 +7,7 @@ import http_proxy from 'http-proxy';
 import http from 'http';
 import Promise from 'bluebird';
 import * as net from 'net';
+import * as portastic from 'portastic';
 
 import Proxy from './proxy';
 import rand_id from './lib/rand_id';
@@ -206,12 +207,18 @@ async function new_client(id, opt, cb) {
         id = rand_id();
     }
 
+    var ports = await portastic.find({min: 6000, max: 6500});
+    if (!ports || ports.length < 1) {
+        throw new Error('could not start tunnel: no open ports were found in the allowed range');
+    }
+
     const popt = {
         id: id,
+        port: ports[0],
         max_tcp_sockets: opt.max_tcp_sockets
     };
 
-    const client = await Proxy(popt);
+    const client = Proxy(popt);
 
     // add to clients map immediately
     // avoiding races with other clients requesting same id
@@ -250,21 +257,16 @@ module.exports = function(opt) {
 
         const req_id = rand_id();
         debug('making new client with id %s', req_id);
-        try {
-            await new_client(req_id, opt, function(err, info) {
-                if (err) {
-                    res.statusCode = 500;
-                    return res.end(err.message);
-                }
+        await new_client(req_id, opt, function(err, info) {
+            if (err) {
+                res.statusCode = 500;
+                return res.end(err.message);
+            }
 
-                const url = schema + '://' + req_id + '.' + req.headers.host;
-                info.url = url;
-                res.json(info);
-            });
-        } catch (error) {
-            res.status(502)
-            res.end(error.message);
-        }
+            const url = schema + '://' + req_id + '.' + req.headers.host;
+            info.url = url;
+            res.json(info);
+        });
     });
 
     app.get('/', function(req, res, next) {
@@ -297,23 +299,16 @@ module.exports = function(opt) {
             err.statusCode = 403;
             return next(err);
         }
-
         debug('making new client with id %s', req_id);
-        try {
-            await new_client(req_id, opt, function(err, info) {
-                if (err) {
-                    return next(err);
-                }
+        await new_client(req_id, opt, function(err, info) {
+            if (err) {
+                return next(err);
+            }
 
-                const url = schema + '://' + req_id + '.' + req.headers.host;
-                info.url = url;
-                res.json(info);
-            });
-        } catch (error) {
-            res.status(502)
-            res.end(error.message);
-        }
-
+            const url = schema + '://' + req_id + '.' + req.headers.host;
+            info.url = url;
+            res.json(info);
+        });
     });
 
     app.use(function(err, req, res, next) {
